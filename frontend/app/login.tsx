@@ -14,7 +14,7 @@ export default function LoginScreen() {
   };
 
   if (user) {
-    router.replace('/(tabs)');
+    router.replace('/journal');
     return null;
   }
 

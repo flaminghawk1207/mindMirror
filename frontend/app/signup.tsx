@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../hooks/useAuth';
 
 export default function SignupScreen() {
   const { signup, error, loading, user } = useAuth();
@@ -14,7 +14,7 @@ export default function SignupScreen() {
   };
 
   if (user) {
-    router.replace('/(tabs)');
+    router.replace('/journal');
     return null;
   }
 
