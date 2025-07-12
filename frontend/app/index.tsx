@@ -1,8 +1,43 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    title: {
+      fontSize: 36,
+      fontWeight: 'bold',
+      marginBottom: 16,
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 18,
+      color: colors.icon,
+      marginBottom: 32,
+    },
+    button: {
+      backgroundColor: colors.tint,
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    buttonText: {
+      color: '#fff',
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>mindMirror</Text>
@@ -16,34 +51,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 32,
-  },
-  button: {
-    backgroundColor: '#007bff',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
