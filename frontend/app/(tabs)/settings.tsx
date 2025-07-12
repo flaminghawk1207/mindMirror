@@ -47,23 +47,7 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Log Out', 
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/');
-          }
-        }
-      ]
-    );
-  };
+
 
   const handleEditProfile = () => {
     Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
@@ -81,6 +65,19 @@ export default function SettingsScreen() {
 
   const handleAbout = () => {
     Alert.alert('About MindMirror', 'MindMirror v1.0.0\n\nA mindful journaling app for mental wellness.');
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout button pressed');
+    try {
+      console.log('Calling logout function...');
+      await logout();
+      console.log('Logout successful, redirecting to login');
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
   };
 
   return (
@@ -154,6 +151,13 @@ export default function SettingsScreen() {
             subtitle="Download your journal entries"
             onPress={handleDataExport}
           />
+          <View style={styles.divider} />
+          <SettingItem
+            title="Logout"
+            subtitle="Sign out of your account"
+            onPress={handleLogout}
+            showChevron={false}
+          />
         </View>
       </View>
 
@@ -175,12 +179,7 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Logout Section */}
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
+
 
       <View style={styles.bottomSpacing} />
     </ScrollView>
@@ -304,21 +303,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.background === '#fff' ? '#f0f0f0' : '#333',
     marginHorizontal: 16,
   },
-  logoutButton: {
-    backgroundColor: '#ff3b30',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  logoutButtonText: {
-    color: '#fff',
+  logoutText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   bottomSpacing: {
     height: 32,

@@ -1,15 +1,42 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useAuth } from '../hooks/useAuth';
 import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { useEffect } from 'react';
+
+function useProtectedRoute(user: any) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === '(tabs)';
+    
+    console.log('Protected route check:', { user: !!user, inAuthGroup, segments });
+    
+    // Only navigate if we have segments and navigation is ready
+    if (segments.length > 0) {
+      if (!user && inAuthGroup) {
+        // Redirect to the sign-in page if user is not signed in and trying to access protected routes
+        console.log('Redirecting to home (not authenticated)');
+        setTimeout(() => router.replace('/'), 100);
+      } else if (user && !inAuthGroup) {
+        // Redirect away from the sign-in page if user is signed in
+        console.log('Redirecting to journal (authenticated)');
+        setTimeout(() => router.replace('/journal'), 100);
+      }
+    }
+  }, [user, segments]);
+}
 
 function NavigationContent() {
   const { theme } = useTheme();
   const { user, loading } = useAuth();
+
+  useProtectedRoute(user);
 
   if (loading) {
     return (
