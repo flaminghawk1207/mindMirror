@@ -83,10 +83,12 @@ export default function AIScreen() {
     setInput('');
     setLoading(true);
     try {
+      // Prepare the conversation history for the backend
+      const history = [...messages, userMessage].map(m => ({ role: m.role, text: m.text }));
       const res = await fetch('http://localhost:3001/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: input, history })
       });
       const data = await res.json();
       if (res.ok && data.reply) {
