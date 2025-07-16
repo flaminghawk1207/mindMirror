@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Gemini chat endpoint
 app.post('/api/chat', async (req, res) => {
-  const { message } = req.body;
+  const { message, history } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'Message is required.' });
   }
@@ -27,16 +27,27 @@ app.post('/api/chat', async (req, res) => {
     // Gemini Pro API endpoint
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
+    // Prepare conversation history for Gemini API
+    let contents = [];
+    if (Array.isArray(history) && history.length > 0) {
+      contents = history.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      }));
+    } else {
+      contents = [
+        {
+          parts: [
+            { text: message }
+          ]
+        }
+      ];
+    }
+
     const response = await axios.post(
       url,
       {
-        contents: [
-          {
-            parts: [
-              { text: message }
-            ]
-          }
-        ]
+        contents
       },
       {
         headers: {
