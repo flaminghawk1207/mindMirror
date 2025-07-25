@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { ListRenderItem, FlatList as FlatListType } from 'react-native';
 
@@ -12,6 +13,11 @@ export default function AIScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const flatListRef = useRef<FlatListType<any>>(null);
+  const [mood, setMood] = useState<string | null>(null);
+  const [intensity, setIntensity] = useState<number>(5);
+  const [moodSubmitted, setMoodSubmitted] = useState(false);
+
+  const moodOptions = ['Happy', 'Sad', 'Angry', 'Excited', 'Calm', 'Anxious'];
 
   const styles = StyleSheet.create({
     container: {
@@ -73,6 +79,67 @@ export default function AIScreen() {
       textAlign: 'center',
       marginBottom: 8,
     },
+    moodContainer: {
+      marginBottom: 16,
+      padding: 16,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+    },
+    moodLabel: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    moodOptionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 12,
+    },
+    moodButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+      backgroundColor: colors.border,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    moodButtonSelected: {
+      backgroundColor: colors.primary,
+    },
+    moodButtonText: {
+      color: colors.text,
+      fontWeight: '500',
+    },
+    moodButtonTextSelected: {
+      color: '#fff',
+    },
+    sliderLabel: {
+      fontSize: 15,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    sliderValue: {
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginLeft: 8,
+    },
+    submitMoodButton: {
+      marginTop: 12,
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    submitMoodButtonText: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 16,
+    },
+    moodResult: {
+      marginTop: 10,
+      alignItems: 'center',
+    },
   });
 
   const sendMessage = async () => {
@@ -123,6 +190,60 @@ export default function AIScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
+      {/* Mood and Intensity Selector */}
+      <View style={styles.moodContainer}>
+        <Text style={styles.moodLabel}>How are you feeling today?</Text>
+        <View style={styles.moodOptionsRow}>
+          {moodOptions.map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.moodButton,
+                mood === option && styles.moodButtonSelected,
+              ]}
+              onPress={() => setMood(option)}
+            >
+              <Text
+                style={[
+                  styles.moodButtonText,
+                  mood === option && styles.moodButtonTextSelected,
+                ]}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.sliderLabel}>
+          Intensity: <Text style={styles.sliderValue}>{intensity}</Text>
+        </Text>
+        {/* @ts-ignore */}
+        <Slider
+          minimumValue={1}
+          maximumValue={10}
+          step={1}
+          value={intensity}
+          onValueChange={setIntensity}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+        />
+        <TouchableOpacity
+          style={styles.submitMoodButton}
+          onPress={() => setMoodSubmitted(true)}
+          disabled={!mood}
+        >
+          <Text style={styles.submitMoodButtonText}>Submit Mood</Text>
+        </TouchableOpacity>
+        {moodSubmitted && mood && (
+          <View style={styles.moodResult}>
+            <Text style={{ color: colors.text }}>
+              Mood: <Text style={{ fontWeight: 'bold' }}>{mood}</Text> | Intensity: <Text style={{ fontWeight: 'bold' }}>{intensity}</Text>
+            </Text>
+          </View>
+        )}
+      </View>
+      {/* Existing Chat UI */}
       <View style={styles.chatContainer}>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <FlatList
