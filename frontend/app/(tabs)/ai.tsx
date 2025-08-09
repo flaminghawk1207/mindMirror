@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Keyboard
 import Slider from '@react-native-community/slider';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { ListRenderItem, FlatList as FlatListType } from 'react-native';
+import { appendMoodEntry } from '../../storage/moodHistory';
 
 export default function AIScreen() {
   const { colors } = useTheme();
   const [messages, setMessages] = useState([
-    { role: 'ai', text: 'Hi! I am Gemini. How can I help you today?' }
+    { role: 'ai', text: 'Hi! I am MindMirror. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,25 @@ export default function AIScreen() {
   const [moodSubmitted, setMoodSubmitted] = useState(false);
 
   const moodOptions = ['Happy', 'Sad', 'Angry', 'Excited', 'Calm', 'Anxious'];
+
+  const getMoodSuggestions = (currentMood: string | null): string[] => {
+    switch (currentMood) {
+      case 'Sad':
+        return ['Suggest a 2-minute mood lift', 'Help me reframe a negative thought', 'Give me 3 tiny steps for today'];
+      case 'Angry':
+        return ['Quick calm-down (under 2 minutes)', 'Help me de-escalate', 'How can I respond constructively?'];
+      case 'Anxious':
+        return ['A 2-minute grounding exercise', 'Plan the next tiny step', 'Reframe a worry'];
+      case 'Happy':
+        return ['Build on this feeling', 'Gratitude prompt', 'Share it forward idea'];
+      case 'Excited':
+        return ['Channel this energy', 'Quick plan in 3 steps', 'Avoid burnout tips'];
+      case 'Calm':
+        return ['Maintain this calm', 'Light reflection', 'Gentle productivity tip'];
+      default:
+        return ['Suggest a 2-minute reset', 'Give me 3 small actions', 'Help me reframe my thoughts'];
+    }
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -140,12 +160,51 @@ export default function AIScreen() {
       marginTop: 10,
       alignItems: 'center',
     },
+    moodSummary: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    changeMoodButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      backgroundColor: colors.border,
+      borderRadius: 8,
+    },
+    changeMoodButtonText: {
+      color: colors.text,
+      fontWeight: '600',
+    },
+    suggestionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 8,
+    },
+    suggestionChip: {
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderWidth: 1,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 16,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    suggestionText: {
+      color: colors.text,
+      fontSize: 13,
+    },
   });
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
     setError('');
-    const userMessage = { role: 'user', text: input };
+    const moodPrefix = mood ? `(Context: I'm feeling ${mood} at intensity ${intensity}/10.) ` : '';
+    const userMessage = { role: 'user', text: moodPrefix + input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -155,11 +214,22 @@ export default function AIScreen() {
       const res = await fetch('http://localhost:3001/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input, history })
+        body: JSON.stringify({ message: userMessage.text, history, mood, intensity })
       });
       const data = await res.json();
       if (res.ok && data.reply) {
         setMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
+        if (data.inferredMood && typeof data.inferredMood === 'string') {
+          setMood(data.inferredMood);
+          setMoodSubmitted(true);
+        }
+        if (typeof data.inferredIntensity === 'number') {
+          setIntensity(data.inferredIntensity);
+        }
+        // Persist inferred mood entry for trends
+        const entryMood = (data.inferredMood && typeof data.inferredMood === 'string') ? data.inferredMood : (mood || 'Unknown');
+        const entryIntensity = (typeof data.inferredIntensity === 'number') ? data.inferredIntensity : intensity;
+        appendMoodEntry({ timestamp: Date.now(), mood: entryMood, intensity: entryIntensity }).catch(() => {});
       } else {
         setError(data.error || 'Failed to get response from Gemini.');
       }
@@ -184,66 +254,85 @@ export default function AIScreen() {
     </View>
   );
 
+  const dynamicPlaceholder = mood ? `What\'s making you feel ${mood.toLowerCase()}?` : 'Type your message...';
+  const suggestions = getMoodSuggestions(mood);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
-      {/* Mood and Intensity Selector */}
-      <View style={styles.moodContainer}>
-        <Text style={styles.moodLabel}>How are you feeling today?</Text>
-        <View style={styles.moodOptionsRow}>
-          {moodOptions.map(option => (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.moodButton,
-                mood === option && styles.moodButtonSelected,
-              ]}
-              onPress={() => setMood(option)}
-            >
-              <Text
+      {/* Mood and Intensity Selector or Summary */}
+      {!moodSubmitted ? (
+        <View style={styles.moodContainer}>
+          <Text style={styles.moodLabel}>How are you feeling today?</Text>
+          <View style={styles.moodOptionsRow}>
+            {moodOptions.map(option => (
+              <TouchableOpacity
+                key={option}
                 style={[
-                  styles.moodButtonText,
-                  mood === option && styles.moodButtonTextSelected,
+                  styles.moodButton,
+                  mood === option && styles.moodButtonSelected,
                 ]}
+                onPress={() => setMood(option)}
               >
-                {option}
-              </Text>
+                <Text
+                  style={[
+                    styles.moodButtonText,
+                    mood === option && styles.moodButtonTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.sliderLabel}>
+            Intensity: <Text style={styles.sliderValue}>{intensity}</Text>
+          </Text>
+          {/* @ts-ignore */}
+          <Slider
+            minimumValue={1}
+            maximumValue={10}
+            step={1}
+            value={intensity}
+            onValueChange={setIntensity}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.primary}
+          />
+          <TouchableOpacity
+            style={[styles.submitMoodButton, !mood && { opacity: 0.6 }]}
+            onPress={() => setMoodSubmitted(true)}
+            disabled={!mood}
+          >
+            <Text style={styles.submitMoodButtonText}>Submit Mood</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.moodSummary}>
+          <Text style={{ color: colors.text }}>
+            Mood: <Text style={{ fontWeight: 'bold' }}>{mood}</Text> | Intensity: <Text style={{ fontWeight: 'bold' }}>{intensity}</Text>
+          </Text>
+          <TouchableOpacity style={styles.changeMoodButton} onPress={() => setMoodSubmitted(false)}>
+            <Text style={styles.changeMoodButtonText}>Change</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Suggestions based on mood */}
+      <View style={{ paddingHorizontal: 16 }}>
+        <View style={styles.suggestionsRow}>
+          {suggestions.map(s => (
+            <TouchableOpacity key={s} style={styles.suggestionChip} onPress={() => setInput(s)}>
+              <Text style={styles.suggestionText}>{s}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.sliderLabel}>
-          Intensity: <Text style={styles.sliderValue}>{intensity}</Text>
-        </Text>
-        {/* @ts-ignore */}
-        <Slider
-          minimumValue={1}
-          maximumValue={10}
-          step={1}
-          value={intensity}
-          onValueChange={setIntensity}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
-        <TouchableOpacity
-          style={styles.submitMoodButton}
-          onPress={() => setMoodSubmitted(true)}
-          disabled={!mood}
-        >
-          <Text style={styles.submitMoodButtonText}>Submit Mood</Text>
-        </TouchableOpacity>
-        {moodSubmitted && mood && (
-          <View style={styles.moodResult}>
-            <Text style={{ color: colors.text }}>
-              Mood: <Text style={{ fontWeight: 'bold' }}>{mood}</Text> | Intensity: <Text style={{ fontWeight: 'bold' }}>{intensity}</Text>
-            </Text>
-          </View>
-        )}
       </View>
-      {/* Existing Chat UI */}
+
+      {/* Chat UI */}
       <View style={styles.chatContainer}>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <FlatList
@@ -251,6 +340,7 @@ export default function AIScreen() {
           data={messages}
           renderItem={renderItem}
           keyExtractor={(_, idx) => idx.toString()}
+          contentContainerStyle={{ paddingBottom: 8 }}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
@@ -261,13 +351,13 @@ export default function AIScreen() {
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Type your message..."
+          placeholder={dynamicPlaceholder}
           placeholderTextColor={colors.icon}
           editable={!loading}
           onSubmitEditing={sendMessage}
           returnKeyType="send"
         />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage} disabled={loading || !input.trim()}>
+        <TouchableOpacity style={[styles.sendButton, (loading || !input.trim()) && { opacity: 0.6 }]} onPress={sendMessage} disabled={loading || !input.trim()}>
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
